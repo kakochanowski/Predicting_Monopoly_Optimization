@@ -1,0 +1,108 @@
+Group Assignment 1
+
+
+```{r}
+# import Libraries
+library(ggplot2)
+library(dplyr)
+```
+
+
+```{r}
+# load data
+df <- read.csv('MarketDataMonopoly.csv')
+str(df)
+```
+
+```{r}
+# profit
+df$Profit <- df$Revenue - df$Cost
+```
+
+
+```{r}
+ggplot(df, aes(x=InputCostIndex, y=Production)) +
+      geom_point()
+
+ggplot(df, aes(x=DemandIndex, y=Production)) +
+      geom_point()
+```
+
+```{r}
+# outcome
+reg <- lm(Production ~ InputCostIndex + DemandIndex, df)
+summary(reg)
+```
+
+```{r}
+ggplot(df, aes(x=InputCostIndex, y=Cost)) +
+      geom_point()
+
+ggplot(df, aes(x=Production, y=Cost)) +
+      geom_point()
+```
+
+```{r}
+# cost model
+model1 <- lm(Cost ~ Production + InputCostIndex, df)
+summary(model1)
+```
+
+
+```{r}
+# price 
+df$Price <- df$Revenue/df$Production
+
+ggplot(df, aes(x=DemandIndex, y=Price)) +
+      geom_point()
+
+ggplot(df, aes(x=Production, y=Price)) +
+      geom_point()
+```
+
+```{r}
+# price model
+model2 <- lm(Price ~ Production + DemandIndex, df)
+summary(model2)
+```
+
+```{r}
+# predict
+# new df
+input <- data.frame('InputCostIndex' = c(100, 200, 50), 'DemandIndex' = c(10, 5, 17), 'Production' = c(0, 0, 0), 'Cost' = c(0, 0, 0), 'Price' = c(0, 0, 0), 'Profit' = c(0, 0, 0))
+
+for (i in 1:3){
+  # production
+  input[i, 3] = predict(reg, newdata = input[i,])
+  # cost
+  input[i, 4] = predict(model1, newdata = input[i,])
+  # demand
+  input[i, 5] = predict(model2, newdata = input[i,])
+  # profit
+  input[i, 6] = input[i, 3]*input[i, 5]-input[i, 4]
+}
+
+input
+```
+
+```{r}
+predict_function <- function(CostIndex, DemandIndex){
+  production <- 2.523e+00 - 9.095e-02*CostIndex + 4.477e+00*DemandIndex
+  cost <- -3.040e+02 + 1.975e+01*production + 1.536e+00*CostIndex
+  price <- 10.508292 - 0.260320*production + 2.937987*DemandIndex
+  profit <- production*price - cost
+  
+  output <- data.frame('Production' = production, 'Cost' = cost, 'Profit' = profit)
+  print(output)
+}
+```
+
+```{r}
+predict_function(100,10)
+predict_function(200,5)
+predict_function(50,17)
+```
+
+
+
+
