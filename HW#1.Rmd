@@ -1,0 +1,87 @@
+
+Library
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+
+```{r}
+df <- read.csv('C:\\Users\\Kiersten\\Documents\\School\\Session_4\\Alistair\\MarketDataMonopoly.csv')
+```
+
+
+```{r}
+summary(df)
+```
+
+
+```{r}
+df$Price <- df$Revenue/df$Production #demand is endogenous
+```
+
+
+```{r}
+ggplot(df, aes(x=Production, y=Price)) +
+      geom_point()
+```
+
+
+```{r}
+#Bin production
+df <- 
+  df %>% 
+  mutate(Production_bin = cut(Production, breaks=c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60)))
+
+View(df)
+ggplot(df, aes(x=Production_bin, y=Price)) +
+      geom_point()
+```
+
+
+```{r}
+r1 = lm(Production ~ InputCostIndex + DemandIndex, data=df)
+summary(r1)
+# ask if input and demand indices changed, what would the optimal output be?
+```
+
+Plot production (q) as a function of input cost and demand indices
+```{r}
+f2<- function(x) {
+    (x)**4-6.2*(x)**3+1.61*(x)**2+15.7*(x)+5.6
+  }
+plot(f2, xlim=c(-4, 7), ylim=c(-50, 35))
+abline(h=0, col="blue")
+```
+
+
+
+NOTES FROM ALISTAIR:
+
+partial derivatives (how does optimal q change)
+
+Think through functional form
+
+Given numerical optimization of the two functions we've chosen, what's the profit and cost
+
+q is endogenous as a response to demand and input cost index (what is cost and demand function as they produce different q), control for endogeneity
+
+---
+- Solve for exogenous
+take away effect of cost index from q, then see how price function changes in q
+
+shock = input cost index and demand index
+inverse demand function (price) = demand index and shock
+cost function = chosen quantity and input cost index
+
+how can calibrate model with given data, then predict with scenarios we haven't seen
+
+Monopolistic competition
+- quadratic cost function ()
+- linear inverse demand function (a-q)
+- add curvature: square, log, add elasticities
+- Index: proportional to market cost (how do movements in index tell us about overall markets)
+
+
+
+
