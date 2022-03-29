@@ -10,7 +10,7 @@ library(dplyr)
 
 ```{r}
 # load data
-df <- read.csv('MarketDataMonopoly.csv')
+df <- read.csv('C:\\Users\\Kiersten\\Documents\\School\\Session_4\\Alistair\\MarketDataMonopoly.csv')
 str(df)
 ```
 
@@ -86,6 +86,47 @@ input
 ```
 
 ```{r}
+newton.rhapson.fullnumeric<-function(f,x0,tol=1e-8,eps=1e-6,maxiter=50,output=FALSE) {
+    # argumens: f: function to optimize, x0: initial guess
+    xx=x0
+    #This is our equation for the derivative
+    fval=num.deriv.1(f,xx,eps)
+    Error=abs(fval)
+    ii=1
+    # Repeat the steps until the error is less than the tolerance
+    while (Error>tol & ii <maxiter ){
+        # this is our equation for the second derivative
+        fd=num.deriv.2( f , xx, sqrt(eps) )
+        # So this is the Newton-rhapson step for
+        # solving the derivative root
+        # via x1=x0-f'(x0)/f"(x0)
+        xx=xx-fval/fd
+        fval=num.deriv.1(f,xx,eps)
+        Error=abs(fval)
+        ii=ii+1
+    } 
+    if (ii>=maxiter) print("Exited due to non-convergence")        
+    if (output && ii<maxiter ) print(paste("Converged to solution ",  toString(round(xx,digits=5))," in ", toString(ii-1)," steps"))
+    xx
+}
+```
+
+```{r}
+profit <- function(CostIndex, DemandIndex) {
+    (2.523e+00 - 9.095e-02*CostIndex + 4.477e+00*DemandIndex)*(10.508292 - 0.260320*(2.523e+00 - 9.095e-02*CostIndex + 4.477e+00*DemandIndex) + 2.937987*DemandIndex) - (3.040e+02 + 1.975e+01*(2.523e+00 - 9.095e-02*CostIndex + 4.477e+00*DemandIndex) + 1.536e+00*CostIndex)
+  }
+```
+
+
+
+```{r}
+newton.rhapson.fullnumeric(f2,4) #global minima
+newton.rhapson.fullnumeric(f2,-1) #local minima
+newton.rhapson.fullnumeric(f2,1) #local maxima
+```
+
+
+```{r}
 predict_function <- function(CostIndex, DemandIndex){
   production <- 2.523e+00 - 9.095e-02*CostIndex + 4.477e+00*DemandIndex
   cost <- -3.040e+02 + 1.975e+01*production + 1.536e+00*CostIndex
@@ -96,6 +137,8 @@ predict_function <- function(CostIndex, DemandIndex){
   print(output)
 }
 ```
+
+
 
 ```{r}
 predict_function(100,10)

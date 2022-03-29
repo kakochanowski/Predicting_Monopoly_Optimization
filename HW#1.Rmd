@@ -8,54 +8,94 @@ library(dplyr)
 
 ```{r}
 df <- read.csv('C:\\Users\\Kiersten\\Documents\\School\\Session_4\\Alistair\\MarketDataMonopoly.csv')
-```
-
-
-```{r}
+View(df)
 summary(df)
 ```
 
 
 ```{r}
 df$Price <- df$Revenue/df$Production #demand is endogenous
-```
-
-
-```{r}
-ggplot(df, aes(x=Production, y=Price)) +
-      geom_point()
-```
-
-
-```{r}
-#Bin production
-df <- 
-  df %>% 
-  mutate(Production_bin = cut(Production, breaks=c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60)))
-
 View(df)
-ggplot(df, aes(x=Production_bin, y=Price)) +
+```
+
+***Define Q***
+- Q as a function of two exogenous variables (input cost index and demand index)
+```{r}
+ggplot(df, aes(x=InputCostIndex, y=Production)) +
+      geom_point()
+
+```
+
+```{r}
+ggplot(df, aes(x=DemandIndex, y=Production)) +
       geom_point()
 ```
 
-
+Clear linear relationship between input cost index and demand index
 ```{r}
-r1 = lm(Production ~ InputCostIndex + DemandIndex, data=df)
-summary(r1)
+r_quantity = lm(Production ~ InputCostIndex + DemandIndex, data=df)
+summary(r_quantity)
 # ask if input and demand indices changed, what would the optimal output be?
 ```
 
 Plot production (q) as a function of input cost and demand indices
 ```{r}
-f2<- function(x) {
-    (x)**4-6.2*(x)**3+1.61*(x)**2+15.7*(x)+5.6
-  }
-plot(f2, xlim=c(-4, 7), ylim=c(-50, 35))
-abline(h=0, col="blue")
+f1 <- function(x,y) {
+    2.523 -.09095*(x)+4.477*(y)
+}
+
+```
+
+Build cost function
+```{r}
+df$Quantity <- f1(df$InputCostIndex, df$DemandIndex)
+View(df)
+
+r_cost = lm(Cost ~ InputCostIndex + Quantity, data=df)
+summary(r_cost)
+
+```
+
+Plot production (q) as a function of input cost and demand indices
+```{r}
+f_cost <- function(x,y) {
+    -307.9 + 1.544*(x)+19.84*(y)
+}
 ```
 
 
+```{r}
+r_price = lm(Price ~ DemandIndex + Quantity, data=df)
+summary(r_price)
+```
 
+```{r}
+f_price <- function(x,y) {
+    10.500652 + 2.944078*(x)-0.261707*(y)
+}
+```
+
+
+```{r}
+predict_function <- function(CostIndex, DemandIndex){
+  quantity <- 2.523e+00 - 9.095e-02*CostIndex + 4.477e+00*DemandIndex
+  cost <- -307.9 + 1.544*quantity + 19.84*CostIndex
+  price <- 10.500652 + 2.944078*quantity -0.261707*DemandIndex
+  profit <- quantity*price - cost
+  
+  output <- data.frame('Production' = quantity, 'Cost' = cost, 'Profit' = profit)
+  print(output)
+}
+```
+
+```{r}
+predict_function(100,10)
+predict_function(200,5)
+predict_function(50,17)
+```
+
+
+---
 NOTES FROM ALISTAIR:
 
 partial derivatives (how does optimal q change)
@@ -66,7 +106,6 @@ Given numerical optimization of the two functions we've chosen, what's the profi
 
 q is endogenous as a response to demand and input cost index (what is cost and demand function as they produce different q), control for endogeneity
 
----
 - Solve for exogenous
 take away effect of cost index from q, then see how price function changes in q
 
