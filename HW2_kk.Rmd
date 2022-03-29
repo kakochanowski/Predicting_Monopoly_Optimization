@@ -1,0 +1,260 @@
+
+```{r}
+install.packages('gtools')
+library(gtools)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+
+Read in data
+```{r}
+inTeams <- read.csv('C:\\Users\\Kiersten\\Downloads\\spi_global_rankings.csv')
+head(inTeams)
+```
+Mean parameters (and log mean)
+```{r}
+mean.off<-mean(inTeams$off)
+mean.def<-mean(inTeams$def)
+lmean.off<-mean(log(inTeams$off))
+lmean.def<-mean(log(inTeams$def)) 
+```
+
+Subset to just Premier League
+```{r}
+premLeague<-subset(inTeams,league=="Barclays Premier League")
+premTeams<-premLeague$name
+rownames(premLeague)<-premTeams
+df.prem<-premLeague[,c("off","def")]
+df.prem
+```
+
+Offense parameter is expected goals when playing against an average team (uses a Poisson model for number of goals produced)
+- alpha is the offense parameter
+- delta is the defense parameter
+```{r}
+lmean.def<- log(mean(df.prem$def))
+lmean.off<- log(mean(df.prem$off))               
+df.prem["alpha"]<-log(df.prem["off"])-lmean.def #team's offense minus the mean defense (the larger the better)
+df.prem["delta"]<-lmean.off-log(df.prem["def"]) #mean offense minus the team's defense (the larger the better because the smaller the original defense score the better)
+head(df.prem)
+# now expected goals for/conceded will match the offense and defense parameters
+```
+
+Lists of the parameters
+```{r}
+alphaList<-df.prem$alpha
+deltaList<-df.prem$delta
+names(alphaList)<-rownames(df.prem)
+names(deltaList)<-rownames(df.prem)
+```
+
+Function for random poisson draw of scoreline for particular match
+```{r}
+draw.score<-function(team1,team2){
+    c(
+        rpois(1,exp(alphaList[team1]-deltaList[team2])),
+  rpois(1,exp(alphaList[team2]-deltaList[team1]))
+    )
+}
+draw.score("Liverpool","Arsenal")
+```
+
+All possible matches in PL:
+*538 includes dynamics for when a match is more important to one team than another (qualifies them for a tournament etc.)
+```{r}
+# All possible matches in a season
+allMatches<-permutations(20, 2, v=rownames(df.prem),repeats.allowed=FALSE)
+colnames(allMatches)<-c("home","away")
+head(allMatches,9)
+rows = nrow(allMatches)
+print(rows)
+```
+
+```{r}
+# Example scores through the entire season
+ScoresMatrix <- matrix(nrow=nrow(allMatches),  ncol=4)
+for (ii in 1:nrow(allMatches)  ) {
+     ScoresMatrix[ii,1:2]=allMatches[ii,] # drawing random teams
+     ScoresMatrix[ii,3:4]= draw.score(allMatches[ii,"home"],allMatches[ii,"away"] ) # simulating random score lines (using defense/offense scores)
+}
+colnames(ScoresMatrix)<-c("home.team","away.team","home.score","away.score")
+head(ScoresMatrix)
+```
+What we have:
+- All possible matches
+- Simulation pulling all possible matches and simulating score lines of those matches
+
+What we need:
+- Each team playing each other twice (20 teams, each team plays 38 matches), 380 matches for one season
+- League placement calculated based on season outcome: wins (3), draws (1), losses (0)
+- Position earnings: convert league placement into position earnings (convert each position into monetary value)
+
+
+```{r}
+df.points <- as.data.frame(ScoresMatrix)
+
+name <- rownames(df.prem)
+
+for (i in 1:20){
+    df.points[, name[i]] <- 0
+}
+
+head(df.points)
+
+name
+```
+
+
+```{r}
+for (i in 1:380){
+    for (j in 1:20){
+        if (df.points[i,1] == name[j]){
+            if (df.points[i,3] > df.points[i,4]){
+                df.points[i,j+4] = 3
+            } else if (df.points[i,3] == df.points[i,4]){
+                df.points[i,j+4] = 1
+            } else if (df.points[i,3] < df.points[i,4]){
+                df.points[i,j+4] = 0
+            } 
+        } 
+        if (df.points[i,2] == name[j]){
+            if (df.points[i,3] > df.points[i,4]){
+                df.points[i,j+4] = 0
+            } else if (df.points[i,3] == df.points[i,4]){
+                df.points[i,j+4] = 1
+            } else if (df.points[i,3] < df.points[i,4]){
+                df.points[i,j+4] = 3
+            }      
+        }
+    }   
+}
+     
+write.csv(df.points, 'C:\\Users\\Kiersten\\Downloads\\totals_original.csv')
+```
+
+
+```{r}
+ScoresMatrix <- as.data.frame(ScoresMatrix)
+PointsMatrix <- as.data.frame(PointsMatrix)
+PointsMatrix$home.points <- NA
+PointsMatrix$away.points <- NA
+df.prem$season_pts <- NA
+df.prem$goals_for <- NA
+df.prem$goals_against <- NA
+
+
+for (i in 1:nrow(PointsMatrix)) {
+  if (PointsMatrix[i,3] > PointsMatrix[i,4]) {
+    PointsMatrix[i,5] = 3 
+    PointsMatrix[i,6] = 0
+    } else if (PointsMatrix[i,3] < PointsMatrix[i,4]) {
+    PointsMatrix[i,5] = 0 
+    PointsMatrix[i,6] = 3
+    } else if (PointsMatrix[i,3] == PointsMatrix[i,4]) {
+    PointsMatrix[i,5] = 1 
+    PointsMatrix[i,6] = 1
+  }
+}
+```
+
+```{r}
+# Add column by team
+df.points_original <- as.data.frame(ScoresMatrix)
+df.points_goalsfor <- as.data.frame(ScoresMatrix)
+df.points_goalsagainst <- as.data.frame(ScoresMatrix)
+
+name <- rownames(df.prem)
+name_df <- as.data.frame(name)
+name_df$goals_for=paste0(name_df$name,"_goalsfor")
+name_df$goals_against=paste0(name_df$name,"_goalsagainst")
+name_goalsfor <- subset(name_df, select = c("goals_for"))
+name_goalsagainst <- subset(name_df, select = c("goals_against"))
+goals_for <- as.character(name_goalsfor[,1])
+goals_against <- as.character(name_goalsagainst[,1])
+
+for (i in 1:20){
+    df.points_original[, name[i]] <- 0
+}
+head(df.points_original)
+df.points <- df.points_original
+
+for (i in 1:20){
+    df.points_goalsfor[, name[i]] <- 0
+}
+
+for (i in 1:20){
+    df.points_goalsagainst[, name[i]] <- 0
+}
+
+# Add column goals for and goals against by team
+```
+
+
+```{r}
+for (i in 1:380){
+    for (j in 1:20){
+        if (df.points[i,1] == name[j]){
+            if (df.points[i,3] > df.points[i,4]){
+                df.points[i,j+4] = 3
+            } else if (df.points[i,3] == df.points[i,4]){
+                df.points[i,j+4] = 1
+            } else if (df.points[i,3] < df.points[i,4]){
+                df.points[i,j+4] = 0
+            } 
+        } 
+        if (df.points[i,2] == name[j]){
+            if (df.points[i,3] > df.points[i,4]){
+                df.points[i,j+4] = 0
+            } else if (df.points[i,3] == df.points[i,4]){
+                df.points[i,j+4] = 1
+            } else if (df.points[i,3] < df.points[i,4]){
+                df.points[i,j+4] = 3
+            }      
+        }
+    }
+}
+```
+
+
+```{r}
+# GOALS FOR
+for (i in 1:380){
+    for (j in 1:20){
+  if (df.points_goalsfor[i,1] == name[j]){ # looking at home team
+            df.points_goalsfor[i,j+4] = df.points_goalsfor[i,3]  # home points go to goals for
+        }
+        if (df.points_goalsfor[i,2] == name[j]){ # looking at away team
+            df.points_goalsfor[i,j+4] = df.points_goalsfor[i,4] # away points go to goals for
+        }
+    }
+}
+
+# GOALS AGAINST
+for (i in 1:380){
+    for (j in 1:20){
+  if (df.points_goalsagainst[i,1] == name[j]){ # looking at home team
+            df.points_goalsagainst[i,j+4] = df.points_goalsagainst[i,4]  # home points go to goals for
+        }
+        if (df.points_goalsagainst[i,2] == name[j]){ # looking at away team
+            df.points_goalsagainst[i,j+4] = df.points_goalsagainst[i,3] # away points go to goals for
+        }
+    }
+}
+```
+
+
+```{r}
+goalsfor <- df.points_goalsfor[,c(-1,-2,-3,-4)]
+goalsagainst <- df.points_goalsagainst[,c(-1,-2,-3,-4)]
+goalsfor <- sapply(goalsfor, as.numeric)
+goalsagainst <- sapply(goalsagainst, as.numeric)
+goalsfor_sum <- as.data.frame(colSums(goalsfor))
+goalsagainst_sum <- as.data.frame(colSums(goalsagainst))
+```
+
+
+
+
