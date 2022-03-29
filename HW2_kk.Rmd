@@ -7,8 +7,6 @@ library(dplyr)
 library(ggplot2)
 ```
 
-
-
 Read in data
 ```{r}
 inTeams <- read.csv('C:\\Users\\Kiersten\\Downloads\\spi_global_rankings.csv')
@@ -76,12 +74,15 @@ print(rows)
 ```{r}
 # Example scores through the entire season
 ScoresMatrix <- matrix(nrow=nrow(allMatches),  ncol=4)
-for (ii in 1:nrow(allMatches)  ) {
+
+for (i in 1:2000) {
+  for (ii in 1:nrow(allMatches)  ) {
      ScoresMatrix[ii,1:2]=allMatches[ii,] # drawing random teams
-     ScoresMatrix[ii,3:4]= draw.score(allMatches[ii,"home"],allMatches[ii,"away"] ) # simulating random score lines (using defense/offense scores)
+     ScoresMatrix[ii,3:4]= draw.score(allMatches[ii,"home"],allMatches[ii,"away"] ) # simulating random score     lines (using defense/offense scores)
+  }
 }
-colnames(ScoresMatrix)<-c("home.team","away.team","home.score","away.score")
-head(ScoresMatrix)
+  colnames(ScoresMatrix)<-c("home.team","away.team","home.score","away.score")
+  head(ScoresMatrix)
 ```
 What we have:
 - All possible matches
@@ -101,10 +102,6 @@ name <- rownames(df.prem)
 for (i in 1:20){
     df.points[, name[i]] <- 0
 }
-
-head(df.points)
-
-name
 ```
 
 
@@ -131,8 +128,6 @@ for (i in 1:380){
         }
     }   
 }
-     
-write.csv(df.points, 'C:\\Users\\Kiersten\\Downloads\\totals_original.csv')
 ```
 
 
@@ -194,6 +189,7 @@ for (i in 1:20){
 
 
 ```{r}
+# POINTS PER MATCH
 for (i in 1:380){
     for (j in 1:20){
         if (df.points[i,1] == name[j]){
@@ -216,10 +212,7 @@ for (i in 1:380){
         }
     }
 }
-```
 
-
-```{r}
 # GOALS FOR
 for (i in 1:380){
     for (j in 1:20){
@@ -247,14 +240,30 @@ for (i in 1:380){
 
 
 ```{r}
+points <- df.points[,c(-1,-2,-3,-4)]
+points <- sapply(points, as.numeric)
+points_sum <- as.data.frame(colSums(points))
+
 goalsfor <- df.points_goalsfor[,c(-1,-2,-3,-4)]
-goalsagainst <- df.points_goalsagainst[,c(-1,-2,-3,-4)]
 goalsfor <- sapply(goalsfor, as.numeric)
-goalsagainst <- sapply(goalsagainst, as.numeric)
 goalsfor_sum <- as.data.frame(colSums(goalsfor))
+
+goalsagainst <- df.points_goalsagainst[,c(-1,-2,-3,-4)]
+goalsagainst <- sapply(goalsagainst, as.numeric)
 goalsagainst_sum <- as.data.frame(colSums(goalsagainst))
 ```
 
+
+```{r}
+df.teams <- cbind(points_sum, goalsfor_sum, goalsagainst_sum)
+colnames(df.teams)[1] <- 'points'
+colnames(df.teams)[2] <- 'goals_for'
+colnames(df.teams)[3] <- 'goals_against'
+
+df.teams <- df.teams %>%
+    mutate(net_goals = goals_for - goals_against) %>%
+    mutate(tie_breaker = runif(20, 0, 1))
+```
 
 
 
